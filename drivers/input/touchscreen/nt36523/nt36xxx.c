@@ -27,10 +27,6 @@
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 
-#ifdef CONFIG_DRM
-#include <drm/drm_notifier_mi.h>
-#endif
-
 #include "nt36xxx.h"
 
 #if NVT_TOUCH_ESD_PROTECT
@@ -61,10 +57,6 @@ struct nvt_ts_data *ts;
 static struct workqueue_struct *nvt_fwu_wq;
 static struct workqueue_struct *nvt_lockdown_wq;
 extern void Boot_Update_Firmware(struct work_struct *work);
-#endif
-
-#ifdef CONFIG_DRM
-static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
 #endif
 
 static int32_t nvt_ts_suspend(struct device *dev);
@@ -1106,7 +1098,7 @@ static int32_t nvt_parse_dt(struct device *dev)
 	ret = of_property_read_u32(np, "novatek,config-array-size", &ts->config_array_size);
 	if (ret) {
 		NVT_LOG("Unable to get array size\n");
-		return ret;
+		//return ret;
 	} else {
 		NVT_LOG("config-array-size: %u\n", ts->config_array_size);
 	}
@@ -2253,7 +2245,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	}
 	INIT_DELAYED_WORK(&ts->nvt_lockdown_work, get_lockdown_info);
 	/* please make sure boot update start after display reset(RESX) sequence*/
-	queue_delayed_work(nvt_lockdown_wq, &ts->nvt_lockdown_work, msecs_to_jiffies(4000));
+	queue_delayed_work(nvt_lockdown_wq, &ts->nvt_lockdown_work, msecs_to_jiffies(200));
 
 #if WAKEUP_GESTURE
 	device_init_wakeup(&ts->input_dev->dev, 1);
@@ -2280,7 +2272,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	}
 	INIT_DELAYED_WORK(&ts->nvt_fwu_work, Boot_Update_Firmware);
 	// please make sure boot update start after display reset(RESX) sequence
-	queue_delayed_work(nvt_fwu_wq, &ts->nvt_fwu_work, msecs_to_jiffies(14000));
+	queue_delayed_work(nvt_fwu_wq, &ts->nvt_fwu_work, msecs_to_jiffies(100));
 #endif
 
 	NVT_LOG("NVT_TOUCH_ESD_PROTECT is %d\n", NVT_TOUCH_ESD_PROTECT);
@@ -2340,15 +2332,6 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	INIT_WORK(&ts->resume_work, nvt_resume_work);
 	INIT_WORK(&ts->suspend_work, nvt_suspend_work);
 
-#ifdef CONFIG_DRM
-	ts->drm_notif.notifier_call = nvt_drm_notifier_callback;
-	ret = mi_drm_register_client(&ts->drm_notif);
-	if(ret) {
-		NVT_ERR("register drm_notifier failed. ret=%d\n", ret);
-		goto err_register_drm_notif_failed;
-	}
-#endif
-
 #ifdef CONFIG_TOUCHSCREEN_NVT_DEBUG_FS
 		ts->debugfs = debugfs_create_dir("tp_debug", NULL);
 		if (ts->debugfs) {
@@ -2363,12 +2346,6 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	nvt_irq_enable(true);
 
 	return 0;
-
-#ifdef CONFIG_DRM
-	if (mi_drm_unregister_client(&ts->drm_notif))
-		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
-err_register_drm_notif_failed:
-#endif
 
 err_alloc_work_thread_failed:
 #if NVT_TOUCH_MP
@@ -2466,13 +2443,6 @@ static void nvt_ts_remove(struct spi_device *client)
 {
 	NVT_LOG("Removing driver...\n");
 
-#ifdef CONFIG_DRM
-	if (mi_drm_unregister_client(&ts->drm_notif))
-		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
-#endif
-
-
-
 #if NVT_TOUCH_MP
 	nvt_mp_proc_deinit();
 #endif
@@ -2482,6 +2452,8 @@ static void nvt_ts_remove(struct spi_device *client)
 #if NVT_TOUCH_PROC
 	nvt_flash_proc_deinit();
 #endif
+
+	sysfs_remove_group(&client->dev.kobj, ts->attrs);
 
 #if NVT_TOUCH_ESD_PROTECT
 	if (nvt_esd_check_wq) {
@@ -2537,11 +2509,6 @@ static void nvt_ts_shutdown(struct spi_device *client)
 	NVT_LOG("Shutdown driver...\n");
 
 	nvt_irq_enable(false);
-
-#ifdef CONFIG_DRM
-	if (mi_drm_unregister_client(&ts->drm_notif))
-		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
-#endif
 
 	destroy_workqueue(ts->event_wq);
 
@@ -2742,45 +2709,6 @@ static int32_t nvt_ts_resume(struct device *dev)
 
 	return 0;
 }
-
-
-#ifdef CONFIG_DRM
-static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
-{
-	struct mi_drm_notifier *evdata = data;
-	int blank;
-	struct nvt_ts_data *ts_data =
-		container_of(self, struct nvt_ts_data, drm_notif);
-
-	if (!evdata)
-		return 0;
-
-	if (evdata->data && ts_data) {
-		blank = evdata->data;
-		if (event == MI_DRM_EARLY_EVENT_BLANK) {
-			if (blank == MI_DRM_BLANK_POWERDOWN) {
-				NVT_LOG("event=%lu, *blank=%d\n", event, blank);
-				flush_workqueue(ts_data->event_wq);
-				queue_work(ts_data->event_wq, &ts_data->suspend_work);
-			}
-		} else if (event == MI_DRM_EARLY_EVENT_BLANK) {
-			if (blank == MI_DRM_BLANK_POWERDOWN) {
-				NVT_LOG("event=%lu, *blank=%d\n", event, blank);
-				nvt_enable_doubleclick();
-			}
-		} else if (event == MI_DRM_EVENT_BLANK) {
-			if (blank == MI_DRM_BLANK_UNBLANK) {
-				NVT_LOG("event=%lu, *blank=%d\n", event, blank);
-				flush_workqueue(ts_data->event_wq);
-				queue_work(ts_data->event_wq, &ts_data->resume_work);
-			}
-		}
-
-	}
-
-	return 0;
-}
-#endif
 
 static int nvt_pm_suspend(struct device *dev)
 {
