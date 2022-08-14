@@ -2768,47 +2768,8 @@ static struct spi_driver nvt_spi_driver = {
 	},
 };
 
-/*******************************************************
-Description:
-	Driver Install function.
-
-return:
-	Executive Outcomes. 0---succeed. not 0---failed.
-********************************************************/
-static int32_t __init nvt_driver_init(void)
-{
-	int32_t ret = 0;
-
-	NVT_LOG("driver init start\n");
-
-	//---add spi driver---
-	ret = spi_register_driver(&nvt_spi_driver);
-	if (ret) {
-		NVT_ERR("failed to add spi driver");
-		goto err_driver;
-	}
-
-	NVT_LOG("finished\n");
-
-err_driver:
-	return ret;
-}
-
-/*******************************************************
-Description:
-	Driver uninstall function.
-
-return:
-	n.a.
-********************************************************/
-static void __exit nvt_driver_exit(void)
-{
-	spi_unregister_driver(&nvt_spi_driver);
-}
-
-late_initcall(nvt_driver_init);
-//module_init(nvt_driver_init);
-module_exit(nvt_driver_exit);
+module_spi_driver(nvt_spi_driver);
 
 MODULE_DESCRIPTION("Novatek Touchscreen Driver");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("spi:NVT-ts-spi");
