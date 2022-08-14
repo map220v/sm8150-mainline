@@ -27,13 +27,12 @@
 
 #include "nt36xxx_mem_map.h"
 
-#define NVT_DEBUG 1
+#define NVT_DEBUG 0
 
 //---GPIO number---
 #define NVTTOUCH_RST_PIN 980
 #define NVTTOUCH_INT_PIN 943
 
-#define NVT_LOCKDOWN_SIZE 8
 #define PINCTRL_STATE_ACTIVE		"pmx_ts_active"
 #define PINCTRL_STATE_SUSPEND		"pmx_ts_suspend"
 
@@ -76,12 +75,12 @@ extern const uint16_t touch_key_array[TOUCH_KEY_NUM];
 #define NVT_TOUCH_SUPPORT_HW_RST 0
 
 //---Customerized func.---
-#define NVT_TOUCH_PROC 1
+#define NVT_TOUCH_PROC 0
 #define NVT_TOUCH_EXT_PROC 0
 #define NVT_TOUCH_MP 0
 #define NVT_TOUCH_MP_SETTING_CRITERIA_FROM_CSV 0
 #define MT_PROTOCOL_B 1
-#define WAKEUP_GESTURE 1
+#define WAKEUP_GESTURE 0
 #define FUNCPAGE_PALM 4
 #define PACKET_PALM_ON 3
 #define PACKET_PALM_OFF 4
@@ -125,26 +124,16 @@ struct nvt_ts_data {
 	struct spi_device *client;
 	struct input_dev *input_dev;
 	struct delayed_work nvt_fwu_work;
-	struct delayed_work nvt_lockdown_work;
 	struct work_struct switch_mode_work;
 	struct work_struct pen_charge_state_change_work;
 	bool pen_is_charge;
 	struct notifier_block pen_charge_state_notifier;
 	uint16_t addr;
 	int8_t phys[32];
-#if defined(CONFIG_FB)
-#ifdef CONFIG_DRM
-	struct notifier_block drm_notif;
-#else
-	struct notifier_block fb_notif;
-#endif
-#endif
 	uint32_t config_array_size;
 	struct nvt_config_info *config_array;
 	const u8 *fw_name;
 	const u8 *mp_name;
-	bool lkdown_readed;
-	u8 lockdown_info[NVT_LOCKDOWN_SIZE];
 	uint8_t fw_ver;
 	uint8_t x_num;
 	uint8_t y_num;
