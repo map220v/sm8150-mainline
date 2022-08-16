@@ -1004,7 +1004,7 @@ int device_links_check_suppliers(struct device *dev)
 	 */
 	mutex_lock(&fwnode_link_lock);
 	if (dev->fwnode && !list_empty(&dev->fwnode->suppliers) &&
-	    !fw_devlink_is_permissive()) {
+	    !fw_devlink_is_permissive() && strcmp(dev->of_node->full_name, "clock-controller@af00000")) {
 		sup_fw = list_first_entry(&dev->fwnode->suppliers,
 					  struct fwnode_link,
 					  c_hook)->supplier;
