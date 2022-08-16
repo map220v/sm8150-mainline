@@ -55,7 +55,6 @@ struct nvt_ts_data *ts;
 
 #if BOOT_UPDATE_FIRMWARE
 static struct workqueue_struct *nvt_fwu_wq;
-static struct workqueue_struct *nvt_lockdown_wq;
 extern void Boot_Update_Firmware(struct work_struct *work);
 #endif
 
@@ -92,35 +91,6 @@ const uint16_t gesture_key_array[] = {
 	KEY_WAKEUP,  //GESTURE_PEN_ONE_CLICK
 };
 #endif
-
-static ssize_t nvt_panel_color_show(struct device *dev,
-			    struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%c\n", ts->lockdown_info[2]);
-}
-
-static ssize_t nvt_panel_vendor_show(struct device *dev,
-			    struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%c\n", ts->lockdown_info[6]);
-}
-
-static ssize_t nvt_panel_display_show(struct device *dev,
-			    struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%c\n", ts->lockdown_info[1]);
-}
-
-static DEVICE_ATTR(panel_color, (S_IRUGO), nvt_panel_color_show, NULL);
-static DEVICE_ATTR(panel_vendor, (S_IRUGO), nvt_panel_vendor_show, NULL);
-static DEVICE_ATTR(panel_display, (S_IRUGO), nvt_panel_display_show, NULL);
-
-struct attribute *nvt_panel_attr[] = {
-	&dev_attr_panel_color.attr,
-	&dev_attr_panel_vendor.attr,
-	&dev_attr_panel_display.attr,
-	NULL,
-};
 
 static uint8_t bTouchIsAwake = 0;
 
@@ -1164,20 +1134,6 @@ static int32_t nvt_parse_dt(struct device *dev)
 }
 #endif
 
-bool is_lockdown_empty(u8 *lockdown)
-{
-       bool ret = true;
-       int i;
-
-       for (i = 0; i < NVT_LOCKDOWN_SIZE; i++) {
-               if (lockdown[i] != 0) {
-                       ret = false;
-                       break;
-               }
-       }
-       return ret;
-}
-
 void nvt_match_fw(void)
 {
 	NVT_LOG("start match fw name");
@@ -1940,24 +1896,6 @@ static void nvt_resume_work(struct work_struct *work)
 	nvt_ts_resume(&ts_core->client->dev);
 }
 
-static void get_lockdown_info(struct work_struct *work)
-{
-	NVT_LOG("lkdown_readed = %d", ts->lkdown_readed);
-
-	if (!ts->lkdown_readed) {
-			NVT_LOG("Lockdown:0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n",
-			ts->lockdown_info[0], ts->lockdown_info[1], ts->lockdown_info[2], ts->lockdown_info[3],
-			ts->lockdown_info[4], ts->lockdown_info[5], ts->lockdown_info[6], ts->lockdown_info[7]);
-		ts->lkdown_readed = true;
-		NVT_LOG("READ LOCKDOWN!!!");
-	} else {
-		NVT_LOG("use lockdown info that readed before");
-		NVT_LOG("Lockdown:0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n",
-			ts->lockdown_info[0], ts->lockdown_info[1], ts->lockdown_info[2], ts->lockdown_info[3],
-			ts->lockdown_info[4], ts->lockdown_info[5], ts->lockdown_info[6], ts->lockdown_info[7]);
-	}
-}
-
 /*******************************************************
 Description:
 	Novatek touchscreen write doubleclick wakeup cmd.
@@ -1997,8 +1935,6 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 #if ((TOUCH_KEY_NUM > 0) || WAKEUP_GESTURE)
 	int32_t retry = 0;
 #endif
-	struct attribute_group *attrs_p = NULL;
-
 	NVT_LOG("probe start\n");
 
 	ts = kzalloc(sizeof(struct nvt_ts_data), GFP_KERNEL);
@@ -2235,17 +2171,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	INIT_WORK(&ts->switch_mode_work, nvt_switch_mode_work);
 	ts->pen_is_charge = false;
 
-	ts->lkdown_readed =false;
 	pm_stay_awake(&client->dev);
-	nvt_lockdown_wq = alloc_workqueue("nvt_lockdown_wq", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
-	if (!nvt_lockdown_wq) {
-		NVT_ERR("nvt_lockdown_wq create workqueue failed\n");
-		ret = -ENOMEM;
-		goto err_create_nvt_lockdown_wq_failed;
-	}
-	INIT_DELAYED_WORK(&ts->nvt_lockdown_work, get_lockdown_info);
-	/* please make sure boot update start after display reset(RESX) sequence*/
-	queue_delayed_work(nvt_lockdown_wq, &ts->nvt_lockdown_work, msecs_to_jiffies(200));
 
 #if WAKEUP_GESTURE
 	device_init_wakeup(&ts->input_dev->dev, 1);
@@ -2272,7 +2198,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	}
 	INIT_DELAYED_WORK(&ts->nvt_fwu_work, Boot_Update_Firmware);
 	// please make sure boot update start after display reset(RESX) sequence
-	queue_delayed_work(nvt_fwu_wq, &ts->nvt_fwu_work, msecs_to_jiffies(100));
+	queue_delayed_work(nvt_fwu_wq, &ts->nvt_fwu_work, msecs_to_jiffies(1000));
 #endif
 
 	NVT_LOG("NVT_TOUCH_ESD_PROTECT is %d\n", NVT_TOUCH_ESD_PROTECT);
@@ -2312,15 +2238,6 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 		goto err_mp_proc_init_failed;
 	}
 #endif
-
-	attrs_p = (struct attribute_group *)devm_kzalloc(&client->dev, sizeof(*attrs_p), GFP_KERNEL);
-	if (!attrs_p) {
-		NVT_ERR("no mem to alloc");
-	}
-	ts->attrs = attrs_p;
-	attrs_p->name = "panel_info";
-	attrs_p->attrs = nvt_panel_attr;
-	ret = sysfs_create_group(&client->dev.kobj, ts->attrs);
 
 	ts->event_wq = alloc_workqueue("nvt-event-queue",
 		WQ_UNBOUND | WQ_HIGHPRI | WQ_CPU_INTENSIVE, 1);
@@ -2375,13 +2292,7 @@ err_create_nvt_esd_check_wq_failed:
 		nvt_fwu_wq = NULL;
 	}
 err_create_nvt_fwu_wq_failed:
-	if (nvt_lockdown_wq) {
-		cancel_delayed_work_sync(&ts->nvt_lockdown_work);
-		destroy_workqueue(nvt_lockdown_wq);
-		nvt_lockdown_wq = NULL;
-	}
 #endif
-err_create_nvt_lockdown_wq_failed:
 #if WAKEUP_GESTURE
 	device_init_wakeup(&ts->input_dev->dev, 0);
 #endif
@@ -2452,8 +2363,6 @@ static void nvt_ts_remove(struct spi_device *client)
 #if NVT_TOUCH_PROC
 	nvt_flash_proc_deinit();
 #endif
-
-	sysfs_remove_group(&client->dev.kobj, ts->attrs);
 
 #if NVT_TOUCH_ESD_PROTECT
 	if (nvt_esd_check_wq) {
