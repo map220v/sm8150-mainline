@@ -8,6 +8,7 @@
 
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/phy/phy.h>
 #include "sm8150.dtsi"
 #include "pm8150.dtsi"
 #include "pm8150b.dtsi"
@@ -112,27 +113,6 @@
 		};
 	};
 
-	chosen {
-		#address-cells = <2>;
-		#size-cells = <2>;
-		ranges;
-
-		framebuffer@9c000000 {
-			compatible = "simple-framebuffer";
-			reg = <0x0 0x9c000000 0x0 (1600 * 2560 * 4)>;
-			width = <1600>;
-			height = <2560>;
-			stride = <(1600 * 4)>;
-			format = "a8r8g8b8";
-			/*
-			 * That's (going to be) a lot of clocks, but it's necessary due
-			 * to unused clk cleanup & no panel driver yet (& no dispcc either)..
-			 */
-			clocks = <&gcc GCC_DISP_HF_AXI_CLK>,
-				 <&gcc GCC_DISP_SF_AXI_CLK>;
-		};
-	};
-
 	vph_pwr: vph-pwr-regulator {
 		compatible = "regulator-fixed";
 		regulator-name = "vph_pwr";
@@ -155,6 +135,30 @@
 		regulator-boot-on;
 
 		vin-supply = <&vph_pwr>;
+	};
+
+	lcd_avdd_5p5: lcd-avdd-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "lcd_avdd_5p5";
+
+		regulator-min-microvolt = <5500000>;
+		regulator-max-microvolt = <5500000>;
+		regulator-enable-ramp-delay = <233>;
+		gpio = <&tlmm 114 0>;
+		enable-active-high;
+		regulator-boot-on;
+	};
+
+	lcd_avee_5p5: lcd-avee-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "lcd_avee_5p5";
+
+		regulator-min-microvolt = <5500000>;
+		regulator-max-microvolt = <5500000>;
+		regulator-enable-ramp-delay = <233>;
+		gpio = <&tlmm 115 0>;
+		enable-active-high;
+		regulator-boot-on;
 	};
 
 	gpio-keys {
@@ -290,8 +294,8 @@
 			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
 		};
 
-		vreg_l14a_1p8: ldo14 {
-			regulator-min-microvolt = <1800000>;
+		vreg_l14a_1p88: ldo14 {
+			regulator-min-microvolt = <1880000>;
 			regulator-max-microvolt = <1880000>;
 			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
 		};
@@ -430,6 +434,10 @@
 	linux,code = <KEY_VOLUMEDOWN>;
 };
 
+&qupv3_id_0 {
+	status = "okay";
+};
+
 &qupv3_id_1 {
 	status = "okay";
 };
@@ -454,7 +462,7 @@
 };
 
 &tlmm {
-	gpio-reserved-ranges = <0 4>, <126 4>;
+	gpio-reserved-ranges = <126 4>;
 
 	qup_uart13_sleep: qup-uart13-sleep {
 		pinmux {
@@ -502,6 +510,37 @@
 			bias-pull-up;
 		};
 	};
+
+	bl_en_state: bl-default-state {
+		bl-en {
+			pins = "gpio27";
+			function = "gpio";
+
+			drive-strength = <16>;
+			output-high;
+			bias-disable;
+		};
+	};
+};
+
+&gmu {
+	status = "okay";
+};
+
+&gpu {
+	status = "okay";
+};
+
+&i2c0 {
+	status = "okay";
+	clock-frequency = <400000>;
+
+	backlight: backlight@11 {
+		compatible = "kinetic,ktz8866";
+		reg = <0x11>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&bl_en_state>;
+	};
 };
 
 &uart2 {
@@ -546,6 +585,87 @@
 		novatek,swrst-n8-addr = <0x03F0FE>;
 		novatek,spi-rd-fast-addr = <0x03F310>;
 	};
+};
+
+//mdss_dsi0_phy and mdss_dsi1_phy enabled at the same time requres "fw_devlink=permissive" (or devlink hack if ufs crashes) should be fixed in 6.0
+&mdss_dsi0 {
+	status = "okay";
+	vdda-supply = <&vreg_l3c_1p2>;
+
+	qcom,dual-dsi-mode;
+	qcom,master-dsi;
+	qcom,sync-dual-dsi;
+
+	panel@0 {
+		compatible = "novatek,nt36523";
+		reg = <0>;
+
+		backlight = <&backlight>;
+		reset-gpios = <&tlmm 6 GPIO_ACTIVE_LOW>;
+
+		vddio-supply = <&vreg_l14a_1p88>;
+		avdd-supply = <&lcd_avdd_5p5>;
+		avee-supply = <&lcd_avee_5p5>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				panel_in_0: endpoint {
+					remote-endpoint = <&dsi0_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				panel_in_1: endpoint {
+					remote-endpoint = <&dsi1_out>;
+				};
+			};
+		};
+	};
+};
+
+&dsi0_out {
+	data-lanes = <0 1 2>;
+	remote-endpoint = <&panel_in_0>;
+};
+
+&mdss_dsi0_phy {
+	status = "okay";
+	vdds-supply = <&vreg_l5a_0p875>;
+	phy-type = <PHY_TYPE_CPHY>;
+};
+
+&mdss_dsi1 {
+	status = "okay";
+	vdda-supply = <&vreg_l3c_1p2>;
+
+	qcom,dual-dsi-mode;
+	qcom,sync-dual-dsi;
+
+	/* DSI1 is slave, so use DSI0 clocks */
+	assigned-clock-parents = <&mdss_dsi0_phy 0>, <&mdss_dsi0_phy 1>;
+};
+
+&dsi1_out {
+	data-lanes = <0 1 2>;
+	remote-endpoint = <&panel_in_1>;
+};
+
+&mdss_dsi1_phy {
+	status = "okay";
+	vdds-supply = <&vreg_l5a_0p875>;
+	phy-type = <PHY_TYPE_CPHY>;
+};
+
+&mdss {
+	status = "okay";
 };
 
 &ufs_mem_hc {
