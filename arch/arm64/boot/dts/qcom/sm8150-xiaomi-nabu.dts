@@ -13,6 +13,7 @@
 #include "pm8150b.dtsi"
 #include "pm8150l.dtsi"
 
+/delete-node/ &tz_mem;
 /delete-node/ &cdsp_mem;
 /delete-node/ &gpu_mem;
 /delete-node/ &ipa_fw_mem;
@@ -40,6 +41,11 @@
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
+
+		tz_mem: memory@86200000 {
+			reg = <0x0 0x86200000 0x0 0x5500000>;
+			no-map;
+		};
 
 		adsp_mem: memory@8be00000 {
 			reg = <0x0 0x8be00000 0x0 0x2200000>;
