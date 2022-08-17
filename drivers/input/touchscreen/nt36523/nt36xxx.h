@@ -130,6 +130,9 @@ struct nvt_ts_data {
 	struct notifier_block pen_charge_state_notifier;
 	uint16_t addr;
 	int8_t phys[32];
+#ifdef CONFIG_DRM
+	struct notifier_block drm_notif;
+#endif
 	uint32_t config_array_size;
 	struct nvt_config_info *config_array;
 	const u8 *fw_name;

@@ -27,6 +27,10 @@
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 
+#ifdef CONFIG_DRM
+#include <drm/drm_notifier_mi.h>
+#endif
+
 #include "nt36xxx.h"
 
 #if NVT_TOUCH_ESD_PROTECT
@@ -56,6 +60,10 @@ struct nvt_ts_data *ts;
 #if BOOT_UPDATE_FIRMWARE
 static struct workqueue_struct *nvt_fwu_wq;
 extern void Boot_Update_Firmware(struct work_struct *work);
+#endif
+
+#ifdef CONFIG_DRM
+static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
 #endif
 
 static int32_t nvt_ts_suspend(struct device *dev);
@@ -2249,6 +2257,15 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	INIT_WORK(&ts->resume_work, nvt_resume_work);
 	INIT_WORK(&ts->suspend_work, nvt_suspend_work);
 
+#ifdef CONFIG_DRM
+	ts->drm_notif.notifier_call = nvt_drm_notifier_callback;
+	ret = mi_drm_register_client(&ts->drm_notif);
+	if(ret) {
+		NVT_ERR("register drm_notifier failed. ret=%d\n", ret);
+		goto err_register_drm_notif_failed;
+	}
+#endif
+
 #ifdef CONFIG_TOUCHSCREEN_NVT_DEBUG_FS
 		ts->debugfs = debugfs_create_dir("tp_debug", NULL);
 		if (ts->debugfs) {
@@ -2263,6 +2280,12 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	nvt_irq_enable(true);
 
 	return 0;
+
+#ifdef CONFIG_DRM
+	if (mi_drm_unregister_client(&ts->drm_notif))
+		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+err_register_drm_notif_failed:
+#endif
 
 err_alloc_work_thread_failed:
 #if NVT_TOUCH_MP
@@ -2354,6 +2377,11 @@ static void nvt_ts_remove(struct spi_device *client)
 {
 	NVT_LOG("Removing driver...\n");
 
+#ifdef CONFIG_DRM
+	if (mi_drm_unregister_client(&ts->drm_notif))
+		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+#endif
+
 #if NVT_TOUCH_MP
 	nvt_mp_proc_deinit();
 #endif
@@ -2418,6 +2446,11 @@ static void nvt_ts_shutdown(struct spi_device *client)
 	NVT_LOG("Shutdown driver...\n");
 
 	nvt_irq_enable(false);
+
+#ifdef CONFIG_DRM
+	if (mi_drm_unregister_client(&ts->drm_notif))
+		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+#endif
 
 	destroy_workqueue(ts->event_wq);
 
@@ -2545,6 +2578,44 @@ static int32_t nvt_ts_suspend(struct device *dev)
 
 	return 0;
 }
+
+#ifdef CONFIG_DRM
+static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
+{
+	struct mi_drm_notifier *evdata = data;
+	int blank;
+	struct nvt_ts_data *ts_data =
+		container_of(self, struct nvt_ts_data, drm_notif);
+
+	if (!evdata)
+		return 0;
+
+	if (evdata->data && ts_data) {
+		blank = evdata->data;
+		if (event == MI_DRM_EARLY_EVENT_BLANK) {
+			if (blank == MI_DRM_BLANK_POWERDOWN) {
+				NVT_LOG("event=%lu, *blank=%d\n", event, blank);
+				flush_workqueue(ts_data->event_wq);
+				queue_work(ts_data->event_wq, &ts_data->suspend_work);
+			}
+		} else if (event == MI_DRM_EARLY_EVENT_BLANK) {
+			if (blank == MI_DRM_BLANK_POWERDOWN) {
+				NVT_LOG("event=%lu, *blank=%d\n", event, blank);
+				nvt_enable_doubleclick();
+			}
+		} else if (event == MI_DRM_EVENT_BLANK) {
+			if (blank == MI_DRM_BLANK_UNBLANK) {
+				NVT_LOG("event=%lu, *blank=%d\n", event, blank);
+				flush_workqueue(ts_data->event_wq);
+				queue_work(ts_data->event_wq, &ts_data->resume_work);
+			}
+		}
+
+	}
+
+	return 0;
+}
+#endif
 
 /*******************************************************
 Description:
