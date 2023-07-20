@@ -24,6 +24,7 @@ properties:
           - enum:
               - xiaomi,elish-boe-nt36523
               - xiaomi,elish-csot-nt36523
+              - xiaomi,nabu-csot-nt36523
           - const: novatek,nt36523
       - items:
           - enum:
