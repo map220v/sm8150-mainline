@@ -43,7 +43,7 @@
 
 
 //---SPI driver info.---
-#define NVT_SPI_NAME "NVT-ts"
+#define NVT_SPI_NAME "NVT-ts-spi"
 
 #if NVT_DEBUG
 #define NVT_LOG(fmt, args...)    pr_err("[%s] %s %d: " fmt, NVT_SPI_NAME, __func__, __LINE__, ##args)
