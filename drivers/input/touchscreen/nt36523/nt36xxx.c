@@ -1877,12 +1877,14 @@ static const struct spi_device_id nvt_ts_id[] = {
 	{ NVT_SPI_NAME, 0 },
 	{ }
 };
+MODULE_DEVICE_TABLE(spi, nvt_ts_id);
 
 #ifdef CONFIG_OF
 static struct of_device_id nvt_match_table[] = {
 	{ .compatible = "novatek,NVT-ts-spi",},
 	{ },
 };
+MODULE_DEVICE_TABLE(of, nvt_match_table);
 #endif
 
 static struct spi_driver nvt_spi_driver = {
