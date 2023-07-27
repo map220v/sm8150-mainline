@@ -9,6 +9,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/phy/phy.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
+#include <dt-bindings/sound/qcom,q6asm.h>
 #include "sm8150.dtsi"
 #include "pm8150.dtsi"
 #include "pm8150b.dtsi"
@@ -480,6 +481,74 @@
 	};
 };
 
+&i2c7 {
+	status = "okay";
+
+	cs35l41_br: cs35l41@40 {
+		compatible = "cirrus,cs35l41";
+		reg = <0x40>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <81 IRQ_TYPE_LEVEL_LOW>;
+		reset-gpios = <&tlmm 92 GPIO_ACTIVE_HIGH>;
+		#sound-dai-cells = <1>;
+		sound-name-prefix = "BR";
+		cirrus,boost-peak-milliamp = <4000>;
+		cirrus,boost-ind-nanohenry = <1000>;
+		cirrus,boost-cap-microfarad = <15>;
+		cirrus,asp-sdout-hiz = <3>;
+		cirrus,gpio2-src-select = <4>;
+		cirrus,gpio2-output-enable;
+	};
+
+	cs35l41_tr: cs35l41@41 {
+		compatible = "cirrus,cs35l41";
+		reg = <0x41>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <90 IRQ_TYPE_LEVEL_LOW>;
+		reset-gpios = <&tlmm 92 GPIO_ACTIVE_HIGH>;
+		#sound-dai-cells = <1>;
+		sound-name-prefix = "TR";
+		cirrus,boost-peak-milliamp = <4000>;
+		cirrus,boost-ind-nanohenry = <1000>;
+		cirrus,boost-cap-microfarad = <15>;
+		cirrus,asp-sdout-hiz = <3>;
+		cirrus,gpio2-src-select = <4>;
+		cirrus,gpio2-output-enable;
+	};
+
+	cs35l41_bl: cs35l41@42 {
+		compatible = "cirrus,cs35l41";
+		reg = <0x42>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <91 IRQ_TYPE_LEVEL_LOW>;
+		reset-gpios = <&tlmm 92 GPIO_ACTIVE_HIGH>;
+		#sound-dai-cells = <1>;
+		sound-name-prefix = "BL";
+		cirrus,boost-peak-milliamp = <4000>;
+		cirrus,boost-ind-nanohenry = <1000>;
+		cirrus,boost-cap-microfarad = <15>;
+		cirrus,asp-sdout-hiz = <3>;
+		cirrus,gpio2-src-select = <4>;
+		cirrus,gpio2-output-enable;
+	};
+
+	cs35l41_tl: cs35l41@43 {
+		compatible = "cirrus,cs35l41";
+		reg = <0x43>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <93 IRQ_TYPE_LEVEL_LOW>;
+		reset-gpios = <&tlmm 92 GPIO_ACTIVE_HIGH>;
+		#sound-dai-cells = <1>;
+		sound-name-prefix = "TL";
+		cirrus,boost-peak-milliamp = <4000>;
+		cirrus,boost-ind-nanohenry = <1000>;
+		cirrus,boost-cap-microfarad = <15>;
+		cirrus,asp-sdout-hiz = <3>;
+		cirrus,gpio2-src-select = <4>;
+		cirrus,gpio2-output-enable;
+	};
+};
+
 &mdss {
 	status = "okay";
 };
@@ -572,6 +641,24 @@
 	status = "okay";
 };
 
+&q6afedai {
+	dai@72 {
+		reg = <QUATERNARY_TDM_RX_0>;
+		qcom,tdm-sync-mode = <1>;
+		qcom,tdm-sync-src = <1>;
+		qcom,tdm-data-out = <0>;
+		qcom,tdm-invert-sync = <1>;
+		qcom,tdm-data-delay = <1>;
+		qcom,tdm-data-align = <0>;
+	};
+};
+
+&q6asmdai {
+	dai@0 {
+		reg = <0>;
+	};
+};
+
 &qupv3_id_0 {
 	status = "okay";
 };
@@ -599,6 +686,43 @@
 	firmware-name = "qcom/sm8150/xiaomi/nabu/modem.mbn";
 };
 
+&sound {
+	compatible = "qcom,sm8150-sndcard";
+	pinctrl-0 = <&quat_tdm_active
+		&quat_tdm_sd1_active>;
+	pinctrl-names = "default";
+	model = "Xiaomi Pad 5";
+
+	audio-routing =
+		"MultiMedia1 Playback", "BR SPK",
+		"MultiMedia1 Playback", "TR SPK",
+		"MultiMedia1 Playback", "BL SPK",
+		"MultiMedia1 Playback", "TL SPK";
+
+	mm1-dai-link {
+		link-name = "MultiMedia1";
+		cpu {
+			sound-dai = <&q6asmdai MSM_FRONTEND_DAI_MULTIMEDIA1>;
+		};
+	};
+
+	speaker-dai-link {
+		link-name = "Speaker Playback";
+		cpu {
+			sound-dai = <&q6afedai QUATERNARY_TDM_RX_0>;
+		};
+
+		platform {
+			sound-dai = <&q6routing>;
+		};
+
+		codec {
+			sound-dai = <&cs35l41_br 0>, <&cs35l41_tr 0>,
+				<&cs35l41_bl 0>, <&cs35l41_tl 0>;
+		};
+	};
+};
+
 &spi18 {
 	status = "okay";
 
@@ -622,6 +746,21 @@
 
 &tlmm {
 	gpio-reserved-ranges = <126 4>;
+
+	quat_tdm_active: quat-tdm-active-state {
+		pins = "gpio137", "gpio138";
+		function = "qua_mi2s";
+		drive-strength = <8>;
+		bias-disable;
+		output-high;
+	};
+
+	quat_tdm_sd1_active: quat-tdm-sd1-active-state {
+		pins = "gpio140";
+		function = "qua_mi2s";
+		drive-strength = <8>;
+		bias-disable;
+	};
 
 	qup_uart13_sleep: qup-uart13-sleep {
 		pinmux {
