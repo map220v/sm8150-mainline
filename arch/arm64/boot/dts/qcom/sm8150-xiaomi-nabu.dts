@@ -139,6 +139,14 @@
 		};
 	};
 
+	battery: battery {
+		compatible = "simple-battery";
+		charge-full-design-microamp-hours = <8720000>;
+		energy-full-design-microwatt-hours = <33600000>;
+		voltage-min-design-microvolt = <3400000>;
+		voltage-max-design-microvolt = <4480000>;
+	};
+
 	bl_vddpos_5p5: bl-vddpos-regulator {
 		compatible = "regulator-fixed";
 		regulator-name = "bl_vddpos_5p5";
@@ -630,6 +638,12 @@
 		input-enable;
 		bias-pull-up;
 	};
+};
+
+&pm8150b_fg {
+	status = "okay";
+	monitored-battery = <&battery>;
+	//power-supplies = <&ln8000_charger>;
 };
 
 &pon_pwrkey {
