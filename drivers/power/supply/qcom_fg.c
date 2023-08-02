@@ -784,6 +784,36 @@ static int qcom_fg_gen3_get_temp_threshold(struct qcom_fg_chip *chip,
 	return 0;
 }
 
+/*************************
+ * BATTERY STATUS, GEN4
+ * ***********************/
+
+/**
+ * @brief qcom_fg_gen4_get_temperature() - Get temperature of battery
+ *
+ * @param chip Pointer to chip
+ * @param val Pointer to store value at
+ * @return int 0 on success, negative errno on error
+ */
+/*static int qcom_fg_gen4_get_temperature(struct qcom_fg_chip *chip, int *val)
+{
+	int temp;
+	u8 readval[2];
+	int ret;
+
+	ret = qcom_fg_sram_read(chip, readval, 0x148, 2, 0); //BATT_TEMP_SRAM
+	if (ret) {
+		dev_err(chip->dev, "Failed to read temperature: %d", ret);
+		return ret;
+	}
+
+	temp = readval[1] << 8 | readval[0];
+    temp = DIV_ROUND_CLOSEST(temp * 10, 4);
+
+	*val = temp -2730;
+	return 0;
+}*/
+
 /************************
  * BATTERY POWER SUPPLY
  * **********************/
@@ -800,6 +830,15 @@ static const struct qcom_fg_ops ops_fg = {
 
 /* Gen3 fuel gauge. PMI8998 and newer */
 static const struct qcom_fg_ops ops_fg_gen3 = {
+	.get_capacity = qcom_fg_get_capacity,
+	.get_temperature = qcom_fg_gen3_get_temperature,
+	.get_current = qcom_fg_gen3_get_current,
+	.get_voltage = qcom_fg_gen3_get_voltage,
+	.get_temp_threshold = qcom_fg_gen3_get_temp_threshold,
+};
+
+/* Gen4 fuel gauge. PM8150B and newer */
+static const struct qcom_fg_ops ops_fg_gen4 = {
 	.get_capacity = qcom_fg_get_capacity,
 	.get_temperature = qcom_fg_gen3_get_temperature,
 	.get_current = qcom_fg_gen3_get_current,
@@ -1298,6 +1337,7 @@ static int qcom_fg_remove(struct platform_device *pdev)
 static const struct of_device_id fg_match_id_table[] = {
 	{ .compatible = "qcom,pmi8994-fg", .data = &ops_fg },
 	{ .compatible = "qcom,pmi8998-fg", .data = &ops_fg_gen3 },
+    { .compatible = "qcom,pm8150b-fg", .data = &ops_fg_gen4 },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, fg_match_id_table);
