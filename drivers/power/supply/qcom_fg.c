@@ -27,6 +27,9 @@
 #define PARAM_ADDR_BATT_VOLTAGE		0x1a0
 #define PARAM_ADDR_BATT_CURRENT		0x1a2
 
+/* RRADC */
+#define ADC_RR_BATT_TEMP_LSB		0x288
+
 /* MEMIF */
 #define MEM_INTF_STS(chip)			(chip->ops->memif_base + 0x10)
 #define MEM_INTF_CFG(chip)			(chip->ops->memif_base + 0x50)
@@ -797,24 +800,22 @@ static int qcom_fg_gen3_get_temp_threshold(struct qcom_fg_chip *chip,
  * @param val Pointer to store value at
  * @return int 0 on success, negative errno on error
  */
-/*static int qcom_fg_gen4_get_temperature(struct qcom_fg_chip *chip, int *val)
+static int qcom_fg_gen4_get_temperature(struct qcom_fg_chip *chip, int *val)
 {
 	int temp;
 	u8 readval[2];
 	int ret;
 
-	ret = qcom_fg_sram_read(chip, readval, 0x148, 2, 0); //BATT_TEMP_SRAM
+	ret = qcom_fg_read(chip, readval, ADC_RR_BATT_TEMP_LSB, 2);
 	if (ret) {
 		dev_err(chip->dev, "Failed to read temperature: %d", ret);
 		return ret;
 	}
 
 	temp = readval[1] << 8 | readval[0];
-	temp = DIV_ROUND_CLOSEST(temp * 10, 4);
-
-	*val = temp -2730;
+	*val = temp * 10;
 	return 0;
-}*/
+}
 
 /************************
  * BATTERY POWER SUPPLY
@@ -844,7 +845,7 @@ static const struct qcom_fg_ops ops_fg_gen3 = {
 /* Gen4 fuel gauge. PM8150B and newer */
 static const struct qcom_fg_ops ops_fg_gen4 = {
 	.get_capacity = qcom_fg_get_capacity,
-	.get_temperature = qcom_fg_gen3_get_temperature,
+	.get_temperature = qcom_fg_gen4_get_temperature,
 	.get_current = qcom_fg_gen3_get_current,
 	.get_voltage = qcom_fg_gen3_get_voltage,
 	.get_temp_threshold = qcom_fg_gen3_get_temp_threshold,
