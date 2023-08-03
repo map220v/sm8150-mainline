@@ -1331,7 +1331,7 @@ static int qcom_fg_remove(struct platform_device *pdev)
 {
 	struct qcom_fg_chip *chip = platform_get_drvdata(pdev);
 
-	power_supply_put_battery_info(chip->chg_psy, chip->batt_info);
+	power_supply_put_battery_info(chip->batt_psy, chip->batt_info);
 
 	if(chip->sram_wq)
 		destroy_workqueue(chip->sram_wq);
