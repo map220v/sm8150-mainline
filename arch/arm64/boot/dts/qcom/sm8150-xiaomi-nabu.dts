@@ -11,6 +11,7 @@
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
 #include <dt-bindings/sound/qcom,q6asm.h>
 #include "sm8150.dtsi"
+#include "sm8150-wcd9340.dtsi"
 #include "pm8150.dtsi"
 #include "pm8150b.dtsi"
 #include "pm8150l.dtsi"
@@ -671,6 +672,10 @@
 	dai@0 {
 		reg = <0>;
 	};
+
+	dai@1 {
+		reg = <1>;
+	};
 };
 
 &qupv3_id_0 {
@@ -707,7 +712,9 @@
 	pinctrl-names = "default";
 	model = "Xiaomi Pad 5";
 
-	audio-routing =
+	audio-routing =	"RX_BIAS", "MCLK",
+		"AMIC1", "MIC BIAS3",
+		"AMIC3", "MIC BIAS4",
 		"MultiMedia1 Playback", "BR SPK",
 		"MultiMedia1 Playback", "TR SPK",
 		"MultiMedia1 Playback", "BL SPK",
@@ -717,6 +724,13 @@
 		link-name = "MultiMedia1";
 		cpu {
 			sound-dai = <&q6asmdai MSM_FRONTEND_DAI_MULTIMEDIA1>;
+		};
+	};
+
+	mm2-dai-link {
+		link-name = "MultiMedia2";
+		cpu {
+			sound-dai = <&q6asmdai MSM_FRONTEND_DAI_MULTIMEDIA2>;
 		};
 	};
 
@@ -733,6 +747,22 @@
 		codec {
 			sound-dai = <&cs35l41_br 0>, <&cs35l41_tr 0>,
 				<&cs35l41_bl 0>, <&cs35l41_tl 0>;
+		};
+	};
+
+	//Bottom & Top internal microphones
+	slimcap-dai-link {
+		link-name = "SLIM Capture 1";
+		cpu {
+			sound-dai = <&q6afedai SLIMBUS_0_TX>;
+		};
+
+		platform {
+			sound-dai = <&q6routing>;
+		};
+
+		codec {
+			sound-dai = <&wcd9340 1>; /* AIF1_CAP */
 		};
 	};
 };
@@ -898,6 +928,26 @@
 	vdda18-supply = <&vreg_l12a_1p8>;
 	vdda33-supply = <&vreg_l2a_3p1>;
 	status = "okay";
+};
+
+&wcd9340 {
+	reset-gpios = <&tlmm 143 GPIO_ACTIVE_HIGH>;
+	vdd-buck-sido-supply = <&vreg_s4a_1p8>;
+	vdd-buck-supply = <&vreg_s4a_1p8>;
+	vdd-tx-supply = <&vreg_s4a_1p8>;
+	vdd-rx-supply = <&vreg_s4a_1p8>;
+	vdd-io-supply = <&vreg_s4a_1p8>;
+
+	qcom,micbias1-microvolt = <1800000>;
+	qcom,micbias2-microvolt = <2750000>;
+	qcom,micbias3-microvolt = <1800000>;
+	qcom,micbias4-microvolt = <1800000>;
+
+	qcom,hphl-jack-type-normally-open;
+	qcom,ground-jack-type-normally-open;
+	qcom,mbhc-buttons-vthreshold-microvolt = <75000 150000 237000 500000 500000 500000 500000 500000>;
+	qcom,mbhc-headset-vthreshold-microvolt = <2600000>;
+	qcom,mbhc-headphone-vthreshold-microvolt = <50000>;
 };
 
 &wifi {
