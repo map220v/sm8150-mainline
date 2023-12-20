@@ -2940,7 +2940,7 @@ static struct clk_branch gcc_ufs_mem_clkref_clk = {
 
 static struct clk_branch gcc_ufs_phy_ahb_clk = {
 	.halt_reg = 0x77014,
-	.halt_check = BRANCH_HALT_SKIP,
+	.halt_check = BRANCH_HALT,
 	.hwcg_reg = 0x77014,
 	.hwcg_bit = 1,
 	.clkr = {
@@ -2955,7 +2955,7 @@ static struct clk_branch gcc_ufs_phy_ahb_clk = {
 
 static struct clk_branch gcc_ufs_phy_axi_clk = {
 	.halt_reg = 0x77010,
-	.halt_check = BRANCH_HALT_SKIP,
+	.halt_check = BRANCH_HALT,
 	.hwcg_reg = 0x77010,
 	.hwcg_bit = 1,
 	.clkr = {
@@ -2993,7 +2993,7 @@ static struct clk_branch gcc_ufs_phy_axi_hw_ctl_clk = {
 
 static struct clk_branch gcc_ufs_phy_ice_core_clk = {
 	.halt_reg = 0x7705c,
-	.halt_check = BRANCH_HALT_SKIP,
+	.halt_check = BRANCH_HALT,
 	.hwcg_reg = 0x7705c,
 	.hwcg_bit = 1,
 	.clkr = {
@@ -3108,7 +3108,7 @@ static struct clk_branch gcc_ufs_phy_tx_symbol_0_clk = {
 
 static struct clk_branch gcc_ufs_phy_unipro_core_clk = {
 	.halt_reg = 0x77058,
-	.halt_check = BRANCH_HALT_SKIP,
+	.halt_check = BRANCH_HALT,
 	.hwcg_reg = 0x77058,
 	.hwcg_bit = 1,
 	.clkr = {
