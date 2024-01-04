@@ -1163,8 +1163,7 @@ static const struct drm_display_mode elish_csot_modes[] = {
 
 static const struct drm_display_mode nabu_csot_modes[] = {
 	{
-		/* There is only one 120 Hz timing, but it doesn't work perfectly, 104 Hz preferred */
-		.clock = (1600 + 88 + 40 + 40) * (2560 + 26 + 4 + 168) * 104 / 1000,
+		.clock = (1600 + 88 + 40 + 40) * (2560 + 26 + 4 + 168) * 120 / 1000,
 		.hdisplay = 1600,
 		.hsync_start = 1600 + 88,
 		.hsync_end = 1600 + 88 + 40,
