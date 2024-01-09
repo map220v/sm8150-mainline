@@ -935,6 +935,54 @@
 			bias-disable;
 		};
 	};
+
+	keyboard_active: keyboard-active-state {
+		sleep-pins {
+			pins = "gpio4";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-up;
+		};
+
+		reset-pins {
+			pins = "gpio49";
+			function = "gpio";
+			drive-strength = <4>;
+			bias-pull-up;
+			output-high;
+		};
+
+		vdd-pins {
+			pins = "gpio82";
+			function = "gpio";
+			drive-strength = <4>;
+			bias-pull-up;
+			output-high;
+		};
+	};
+
+	keyboard_suspend: keyboard-suspend-state {
+		sleep-pins {
+			pins = "gpio4";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-down;
+		};
+
+		reset-pins {
+			pins = "gpio49";
+			function = "gpio";
+			drive-strength = <4>;
+			bias-pull-down;
+		};
+
+		vdd-pins {
+			pins = "gpio82";
+			function = "gpio";
+			drive-strength = <4>;
+			bias-pull-down;
+		};
+	};
 };
 
 &uart2 {
@@ -1005,6 +1053,34 @@
 	vdda18-supply = <&vreg_l12a_1p8>;
 	vdda33-supply = <&vreg_l2a_3p1>;
 	status = "okay";
+};
+
+&usb_1_role_switch_out {
+	remote-endpoint = <&pm8150b_role_switch_in>;
+};
+
+&usb_2 {
+	/* USB 2.0 only */
+	qcom,select-utmi-as-pipe-clk;
+	status = "okay";
+};
+
+&usb_2_hsphy {
+	vdda-pll-supply = <&vreg_l5a_0p8>;
+	vdda18-supply = <&vreg_l12a_1p8>;
+	vdda33-supply = <&vreg_l2a_3p1>;
+	status = "okay";
+	pinctrl-0 = <&keyboard_active>;
+	pinctrl-1 = <&keyboard_suspend>;
+	pinctrl-names = "default", "sleep";
+};
+
+&usb_2_dwc3 {
+	dr_mode = "host";
+	maximum-speed = "high-speed";
+	/* Remove USB3 phy */
+	phys = <&usb_2_hsphy>;
+	phy-names = "usb2-phy";
 };
 
 &wcd9340 {
