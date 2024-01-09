@@ -491,6 +491,26 @@
 	};
 };
 
+&i2c4 {
+	status = "okay";
+
+	typec-mux@43 {
+		compatible = "fcs,fsa4480";
+		reg = <0x43>;
+
+		vcc-supply = <&vreg_bob>;
+
+		mode-switch;
+		orientation-switch;
+
+		port {
+			fsa4480_sbu_mux: endpoint {
+				remote-endpoint = <&pm8150b_sbu_mux_in>;
+			};
+		};
+	};
+};
+
 &i2c7 {
 	status = "okay";
 
@@ -681,6 +701,14 @@
 
 				pm8150b_role_switch_in: endpoint {
 					remote-endpoint = <&usb_1_dwc3_hs>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+
+				pm8150b_sbu_mux_in: endpoint {
+					remote-endpoint = <&fsa4480_sbu_mux>;
 				};
 			};
 		};
