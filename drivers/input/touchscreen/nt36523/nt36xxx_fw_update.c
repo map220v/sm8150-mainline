@@ -838,21 +838,4 @@ request_firmware_fail:
 
 	return ret;
 }
-
-/*******************************************************
-Description:
-	Novatek touchscreen update firmware when booting
-	function.
-
-return:
-	n.a.
-*******************************************************/
-void Boot_Update_Firmware(struct work_struct *work)
-{
-	mutex_lock(&ts->lock);
-	nvt_update_firmware(ts->fw_name);
-	disable_pen_input_device(false);
-	nvt_get_fw_info();
-	mutex_unlock(&ts->lock);
-}
 #endif /* BOOT_UPDATE_FIRMWARE */
