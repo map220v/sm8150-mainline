@@ -47,11 +47,6 @@ uint8_t esd_retry = 0;
 
 struct nvt_ts_data *ts;
 
-#if BOOT_UPDATE_FIRMWARE
-static struct workqueue_struct *nvt_fwu_wq;
-extern void Boot_Update_Firmware(struct work_struct *work);
-#endif
-
 #ifdef CONFIG_DRM
 static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
 #endif
@@ -1173,7 +1168,7 @@ static int8_t nvt_ts_check_chip_ver_trim(uint32_t chip_ver_trim_addr)
 	return 0;
 }
 
-int32_t disable_pen_input_device(bool disable) {
+static int32_t disable_pen_input_device(bool disable) {
 	uint8_t buf[8] = {0};
 	int32_t ret = 0;
 
@@ -1481,15 +1476,9 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 //#endif
 
 #if BOOT_UPDATE_FIRMWARE
-	nvt_fwu_wq = alloc_workqueue("nvt_fwu_wq", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
-	if (!nvt_fwu_wq) {
-		NVT_ERR("nvt_fwu_wq create workqueue failed\n");
-		ret = -ENOMEM;
-		goto err_create_nvt_fwu_wq_failed;
-	}
-	INIT_DELAYED_WORK(&ts->nvt_fwu_work, Boot_Update_Firmware);
-	// please make sure boot update start after display reset(RESX) sequence
-	queue_delayed_work(nvt_fwu_wq, &ts->nvt_fwu_work, msecs_to_jiffies(14000));
+	ret = nvt_update_firmware(ts->fw_name);
+	if (ret)
+		NVT_ERR("download firmware failed\n");
 #endif
 
 	NVT_LOG("NVT_TOUCH_ESD_PROTECT is %d\n", NVT_TOUCH_ESD_PROTECT);
@@ -1525,6 +1514,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 #endif
 
 	bTouchIsAwake = 1;
+	disable_pen_input_device(false);
 	NVT_LOG("end\n");
 
 	nvt_irq_enable(true);
@@ -1546,15 +1536,6 @@ err_alloc_work_thread_failed:
 		nvt_esd_check_wq = NULL;
 	}
 err_create_nvt_esd_check_wq_failed:
-#endif
-#if BOOT_UPDATE_FIRMWARE
-	if (nvt_fwu_wq) {
-		cancel_delayed_work_sync(&ts->nvt_fwu_work);
-		destroy_workqueue(nvt_fwu_wq);
-		nvt_fwu_wq = NULL;
-	}
-err_create_nvt_fwu_wq_failed:
-
 #endif
 	free_irq(client->irq, ts);
 err_int_request_failed:
@@ -1628,14 +1609,6 @@ static void nvt_ts_remove(struct spi_device *client)
 	}
 #endif
 
-#if BOOT_UPDATE_FIRMWARE
-	if (nvt_fwu_wq) {
-		cancel_delayed_work_sync(&ts->nvt_fwu_work);
-		destroy_workqueue(nvt_fwu_wq);
-		nvt_fwu_wq = NULL;
-	}
-#endif
-
 	nvt_irq_enable(false);
 	free_irq(client->irq, ts);
 
@@ -1685,14 +1658,6 @@ static void nvt_ts_shutdown(struct spi_device *client)
 		nvt_esd_check_wq = NULL;
 	}
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
-
-#if BOOT_UPDATE_FIRMWARE
-	if (nvt_fwu_wq) {
-		cancel_delayed_work_sync(&ts->nvt_fwu_work);
-		destroy_workqueue(nvt_fwu_wq);
-		nvt_fwu_wq = NULL;
-	}
-#endif
 }
 
 /*******************************************************
@@ -1734,12 +1699,12 @@ static int32_t nvt_ts_suspend(struct device *dev)
 
 	NVT_LOG("suspend start\n");
 
-	bTouchIsAwake = 0;
-
 	if (ts->pen_input_dev_enable) {
 		NVT_LOG("if enable pen,will close it");
 		disable_pen_input_device(true);
 	}
+
+	bTouchIsAwake = 0;
 
 	if (ts->db_wakeup) {
 		/*---write command to enter "wakeup gesture mode"---*/
