@@ -993,4 +993,10 @@ config BATTERY_QCOM_FG
 	  adds support for battery fuel gauging and state of charge of
 	  battery connected to the fuel gauge.
 
+config CHARGER_LN8000
+	tristate "LionSemi LN8000 charger driver"
+	depends on MFD_SPMI_PMIC
+	help
+	  Say Y here to enable the LionSemi LN8000 charger driver.
+
 endif # POWER_SUPPLY
