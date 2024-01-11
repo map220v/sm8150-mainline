@@ -510,6 +510,33 @@
 			};
 		};
 	};
+
+	ln8000_charger@51 {
+		compatible = "lionsemi,ln8000";
+		reg = <0x51>;
+
+		status = "disabled";
+
+		irq-gpios = <&tlmm 36 0x2002>;
+
+		usb-tcpm = <&pm8150b_typec>;
+
+		ln8000_charger,bat-ovp-threshold = <4560>;
+		ln8000_charger,bat-ovp-alarm-threshold = <4525>;
+		ln8000_charger,bus-ovp-threshold = <13000>;
+		ln8000_charger,bus-ovp-alarm-threshold = <11000>;
+		ln8000_charger,bus-ocp-threshold = <3750>;
+		ln8000_charger,bus-ocp-alarm-threshold = <3500>;
+		ln8000_charger,ntc-alarm-cfg  = <226>;
+
+		ln8000_charger,tdie-prot-disable;
+		ln8000_charger,tbus-mon-disable;
+		ln8000_charger,tbat-mon-disable;
+		ln8000_charger,iin-ocp-disable;
+		ln8000_charger,iin-reg-disable;
+		ln8000_charger,tdie-reg-disable;
+		ln8000_charger,vbat-reg-disable;
+	};
 };
 
 &i2c7 {
