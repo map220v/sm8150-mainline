@@ -634,6 +634,7 @@
 		vddio-supply = <&vreg_l14a_1p8>;
 		reset-gpios = <&tlmm 6 GPIO_ACTIVE_LOW>;
 		backlight = <&backlight>;
+		rotation = <90>;
 
 		ports {
 			#address-cells = <1>;
