@@ -1087,10 +1087,6 @@
 	status = "okay";
 };
 
-&usb_1_role_switch_out {
-	remote-endpoint = <&pm8150b_role_switch_in>;
-};
-
 &usb_2 {
 	/* USB 2.0 only */
 	qcom,select-utmi-as-pipe-clk;
