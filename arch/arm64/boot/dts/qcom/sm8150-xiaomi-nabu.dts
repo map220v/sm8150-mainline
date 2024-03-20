@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2023, map220v <map220v300@gmail.com>
+ * Copyright (c) 2023-2024, map220v <map220v300@gmail.com>
  */
 
 /dts-v1/;
@@ -206,6 +206,16 @@
 			label = "Volume Up";
 			gpios = <&pm8150_gpios 6 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_VOLUMEUP>;
+			debounce-interval = <15>;
+			linux,can-disable;
+			wakeup-source;
+		};
+
+		event-hall-sensor {
+			label = "Hall Effect Sensor";
+			gpios = <&tlmm 9 GPIO_ACTIVE_LOW>;
+			linux,input-type = <EV_SW>;
+			linux,code = <SW_LID>;
 			debounce-interval = <15>;
 			linux,can-disable;
 			wakeup-source;
