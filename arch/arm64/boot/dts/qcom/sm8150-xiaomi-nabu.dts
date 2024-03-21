@@ -43,6 +43,21 @@
 		wifi0 = &wifi;
 	};
 
+	chosen {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		framebuffer: framebuffer@9c000000 {
+			compatible = "simple-framebuffer";
+			reg = <0x0 0x9c000000 0x0 0x2400000>;
+			width = <1600>;
+			height = <2560>;
+			stride = <(1600 * 4)>;
+			format = "a8r8g8b8";
+		};
+	};
+
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -95,6 +110,11 @@
 
 		cdsp_mem: memory@99100000 {
 			reg = <0x0 0x99100000 0x0 0x1400000>;
+			no-map;
+		};
+
+		cont_splash_mem@9c000000 {
+			reg = <0x0 0x9c000000 0x0 0x2400000>;
 			no-map;
 		};
 
