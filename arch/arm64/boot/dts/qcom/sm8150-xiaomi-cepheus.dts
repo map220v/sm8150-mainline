@@ -312,7 +312,8 @@
 		};
 
 		vreg_l10a_2p5: ldo10 {
-			regulator-min-microvolt = <2504000>;
+			/* UFS VCC: M-PHY TX requires >=2.95V to arm T_TxActivate */
+			regulator-min-microvolt = <2950000>;
 			regulator-max-microvolt = <2960000>;
 			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
 			regulator-name = "pm8150_l10a_2p5";
