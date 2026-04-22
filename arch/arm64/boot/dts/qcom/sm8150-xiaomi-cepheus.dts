@@ -38,7 +38,9 @@
 
 	aliases {
 		serial0 = &uart2;
+		serial1 = &uart13;
 		display0 = &framebuffer;
+		bluetooth0 = &bluetooth;
 	};
 
 	chosen {
@@ -578,4 +580,17 @@
 	status = "okay";
 	vdda-phy-supply = <&vreg_l3c_1p2>;
 	vdda-pll-supply = <&vreg_l5a_0p875>;
+};
+
+&uart13 {
+	status = "okay";
+
+	bluetooth: bluetooth {
+		compatible = "qcom,wcn3990-bt";
+		vddio-supply  = <&vreg_l12a_1p8>;
+		vddxo-supply  = <&vreg_l7a_1p8>;
+		vddrf-supply  = <&vreg_l2c_1p3>;
+		vddch0-supply = <&vreg_l11c_3p3>;
+		max-speed = <3200000>;
+	};
 };
